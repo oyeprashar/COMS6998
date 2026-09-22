@@ -1,35 +1,32 @@
-import { supabase } from "@/lib/supabase";
+"use client";
 
-export default async function Home() {
-    const { data: todos, error } = await supabase
-        .from("todos")
-        .select("*");
+import Script from "next/script";
 
+export default function Home() {
     return (
-        <main className="p-8">
-            <h1 className="text-4xl font-bold mb-8">Hello World</h1>
+        <main>
+            <h1>Hello World</h1>
 
-            <h2 className="text-2xl font-semibold mb-4">Todos</h2>
+            <Script
+                src="https://accounts.google.com/gsi/client"
+                strategy="afterInteractive"
+            />
 
-            {error ? (
-                <p className="text-red-500">
-                    Error loading todos: {error.message}
-                </p>
-            ) : (
-                <ul className="space-y-3">
-                    {todos?.map((todo) => (
-                        <li
-                            key={todo.id}
-                            className="border rounded-lg p-4"
-                        >
-                            <p className="font-medium">{todo.title}</p>
-                            <p className="text-sm text-gray-500">
-                                {todo.completed ? "Completed" : "Not completed"}
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            <div
+                id="g_id_onload"
+                data-client_id={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+                data-login_uri="http://localhost:3000/auth/callback"
+                data-ux_mode="redirect"
+                data-auto_prompt="false"
+            />
+
+            <div
+                className="g_id_signin"
+                data-type="standard"
+                data-size="large"
+                data-theme="outline"
+                data-text="sign_in_with"
+            />
         </main>
     );
 }
