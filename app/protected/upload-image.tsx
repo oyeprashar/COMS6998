@@ -132,6 +132,9 @@ export default function UploadImage({ userId }: { userId: string }) {
 
             setSelectedFile(null);
             setPreviewUrl("");
+
+            // Tell caption feed to refresh
+            window.dispatchEvent(new Event("caption-uploaded"));
         } catch (err) {
             console.error(err);
 

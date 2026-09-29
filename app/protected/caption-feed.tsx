@@ -23,6 +23,7 @@ export default function CaptionFeed({ userId }: { userId: string }) {
     const [items, setItems] = useState<
         (ImageRow & { signedUrl: string })[]
     >([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -71,30 +72,56 @@ export default function CaptionFeed({ userId }: { userId: string }) {
 
     useEffect(() => {
         loadFeed();
+
+        const refreshFeed = () => {
+            loadFeed();
+        };
+
+        window.addEventListener("caption-uploaded", refreshFeed);
+
+        return () => {
+            window.removeEventListener("caption-uploaded", refreshFeed);
+        };
     }, []);
 
     const vote = async (
         captionId: string,
-        value: 1 | -1
+        value: 1 | -1,
+        currentVote?: number
     ) => {
         const supabase = createClient();
 
-        const { error: voteError } = await supabase
-            .from("votes")
-            .upsert(
-                {
-                    user_id: userId,
-                    caption_id: captionId,
-                    vote: value,
-                },
-                {
-                    onConflict: "user_id,caption_id",
-                }
-            );
+        // Clicking the same vote again removes it
+        if (currentVote === value) {
+            const { error: deleteError } = await supabase
+                .from("votes")
+                .delete()
+                .eq("user_id", userId)
+                .eq("caption_id", captionId);
 
-        if (voteError) {
-            setError(voteError.message);
-            return;
+            if (deleteError) {
+                setError(deleteError.message);
+                return;
+            }
+        } else {
+            // New vote or switching vote
+            const { error: voteError } = await supabase
+                .from("votes")
+                .upsert(
+                    {
+                        user_id: userId,
+                        caption_id: captionId,
+                        vote: value,
+                    },
+                    {
+                        onConflict: "user_id,caption_id",
+                    }
+                );
+
+            if (voteError) {
+                setError(voteError.message);
+                return;
+            }
         }
 
         await loadFeed();
@@ -152,7 +179,11 @@ export default function CaptionFeed({ userId }: { userId: string }) {
                                     <div className="mt-4 flex items-center gap-4">
                                         <button
                                             onClick={() =>
-                                                vote(caption.id, 1)
+                                                vote(
+                                                    caption.id,
+                                                    1,
+                                                    myVote
+                                                )
                                             }
                                             className={
                                                 myVote === 1
@@ -167,7 +198,11 @@ export default function CaptionFeed({ userId }: { userId: string }) {
 
                                         <button
                                             onClick={() =>
-                                                vote(caption.id, -1)
+                                                vote(
+                                                    caption.id,
+                                                    -1,
+                                                    myVote
+                                                )
                                             }
                                             className={
                                                 myVote === -1
