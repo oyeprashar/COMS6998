@@ -4,7 +4,13 @@ import Image from "next/image";
 import { ChangeEvent, DragEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function UploadImage({ userId }: { userId: string }) {
+export default function UploadImage({
+                                        userId,
+                                        onUploaded,
+                                    }: {
+    userId: string;
+    onUploaded: () => void;
+}) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState("");
     const [error, setError] = useState("");
@@ -133,8 +139,7 @@ export default function UploadImage({ userId }: { userId: string }) {
             setSelectedFile(null);
             setPreviewUrl("");
 
-            // Tell caption feed to refresh
-            window.dispatchEvent(new Event("caption-uploaded"));
+            onUploaded();
         } catch (err) {
             console.error(err);
 
@@ -149,19 +154,37 @@ export default function UploadImage({ userId }: { userId: string }) {
     };
 
     return (
-        <div className="mt-8">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl backdrop-blur">
+            <div className="mb-6">
+                <h2 className="text-2xl font-semibold">
+                    Create a Caption Battle
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-400">
+                    Upload an image and Gemini will generate three captions.
+                </p>
+            </div>
+
             <div
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={handleDrop}
-                className="rounded-2xl border-2 border-dashed border-gray-700 p-8 text-center"
+                className="group rounded-2xl border border-dashed border-purple-500/40 bg-purple-500/[0.03] p-8 text-center transition hover:border-purple-400 hover:bg-purple-500/[0.06]"
             >
                 {!previewUrl ? (
                     <>
-                        <p className="mb-5 text-gray-300">
-                            Drag and drop an image here
+                        <div className="mb-4 text-4xl">
+                            ✨
+                        </div>
+
+                        <p className="mb-2 text-lg font-medium">
+                            Drop your image here
                         </p>
 
-                        <label className="cursor-pointer rounded-lg bg-white px-5 py-3 font-medium text-black">
+                        <p className="mb-6 text-sm text-gray-500">
+                            PNG, JPG, WEBP
+                        </p>
+
+                        <label className="cursor-pointer rounded-xl bg-white px-5 py-3 font-semibold text-black transition hover:bg-gray-200">
                             Choose image
 
                             <input
@@ -174,7 +197,7 @@ export default function UploadImage({ userId }: { userId: string }) {
                     </>
                 ) : (
                     <div>
-                        <div className="relative h-80 w-full">
+                        <div className="relative h-96 w-full overflow-hidden rounded-xl bg-black">
                             <Image
                                 src={previewUrl}
                                 alt="Image preview"
@@ -188,7 +211,7 @@ export default function UploadImage({ userId }: { userId: string }) {
                                 setSelectedFile(null);
                                 setPreviewUrl("");
                             }}
-                            className="mt-4 text-sm text-gray-400 underline"
+                            className="mt-4 text-sm text-gray-400 underline hover:text-white"
                         >
                             Choose another image
                         </button>
@@ -197,55 +220,61 @@ export default function UploadImage({ userId }: { userId: string }) {
             </div>
 
             {error && (
-                <p className="mt-4 text-red-400">
+                <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
                     {error}
-                </p>
+                </div>
             )}
 
             {message && (
-                <p className="mt-4 text-green-400">
+                <div className="mt-4 rounded-xl border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-400">
                     {message}
-                </p>
+                </div>
             )}
 
             <button
                 onClick={handleUpload}
                 disabled={!selectedFile || isUploading}
-                className="mt-6 w-full rounded-xl bg-white px-6 py-3 font-semibold text-black disabled:opacity-40"
+                className="mt-6 w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
             >
                 {isUploading
-                    ? "Uploading and generating captions..."
-                    : "Upload image"}
+                    ? "Generating your captions..."
+                    : "Generate Captions"}
             </button>
 
             {description && (
-                <div className="mt-8 rounded-xl border border-gray-800 p-5">
-                    <h2 className="mb-2 text-lg font-semibold">
-                        Image Description
-                    </h2>
+                <div className="mt-8 rounded-2xl border border-white/10 bg-black/30 p-5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-purple-400">
+                        AI Image Analysis
+                    </p>
 
-                    <p className="text-gray-300">
+                    <p className="leading-7 text-gray-300">
                         {description}
                     </p>
                 </div>
             )}
 
             {captions.length > 0 && (
-                <div className="mt-6 space-y-3">
-                    <h2 className="text-lg font-semibold">
+                <div className="mt-6">
+                    <h3 className="mb-4 text-xl font-semibold">
                         Generated Captions
-                    </h2>
+                    </h3>
 
-                    {captions.map((caption, index) => (
-                        <div
-                            key={index}
-                            className="rounded-xl border border-gray-800 p-4"
-                        >
-                            {caption}
-                        </div>
-                    ))}
+                    <div className="space-y-3">
+                        {captions.map((caption, index) => (
+                            <div
+                                key={index}
+                                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-purple-500/40"
+                            >
+                                <span className="mr-3 text-purple-400">
+                                    #{index + 1}
+                                </span>
+
+                                {caption}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
-        </div>
+        </section>
     );
 }

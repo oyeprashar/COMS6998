@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import UploadImage from "./upload-image";
-import CaptionFeed from "./caption-feed";
+import CaptionBattle from "./caption-battle";
 
 export default async function ProtectedPage() {
     const supabase = await createClient();
@@ -15,19 +14,27 @@ export default async function ProtectedPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white">
-            <div className="mx-auto max-w-2xl px-6 py-12">
-                <h1 className="text-4xl font-bold">
-                    Caption Battle
-                </h1>
+        <main className="min-h-screen bg-[#070707] text-white">
+            <div className="mx-auto max-w-5xl px-6 py-12">
+                <header className="mb-12">
+                    <p className="mb-3 text-sm font-medium uppercase tracking-[0.25em] text-purple-400">
+                        AI Caption Arena
+                    </p>
 
-                <p className="mt-2 text-gray-400">
-                    Logged in as {user.email}
-                </p>
+                    <h1 className="text-5xl font-bold tracking-tight">
+                        Caption Battle
+                    </h1>
 
-                <UploadImage userId={user.id} />
+                    <p className="mt-3 max-w-xl text-gray-400">
+                        Upload an image, generate AI captions, and vote for the funniest one.
+                    </p>
 
-                <CaptionFeed userId={user.id} />
+                    <p className="mt-4 text-sm text-gray-600">
+                        Signed in as {user.email}
+                    </p>
+                </header>
+
+                <CaptionBattle userId={user.id} />
             </div>
         </main>
     );
