@@ -11,33 +11,41 @@ export default function Home() {
     }, []);
 
     return (
-        <main>
-            <h1>Hello World</h1>
-
+        <main className="min-h-screen bg-black text-white">
             <Script
                 src="https://accounts.google.com/gsi/client"
                 strategy="afterInteractive"
             />
 
-            {callbackUrl && (
-                <>
-                    <div
-                        id="g_id_onload"
-                        data-client_id={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
-                        data-login_uri={callbackUrl}
-                        data-ux_mode="redirect"
-                        data-auto_prompt="false"
-                    />
+            <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6">
+                <h1 className="text-4xl font-bold">
+                    Caption Battle
+                </h1>
 
-                    <div
-                        className="g_id_signin"
-                        data-type="standard"
-                        data-size="large"
-                        data-theme="outline"
-                        data-text="sign_in_with"
-                    />
-                </>
-            )}
+                <p className="mt-2 text-gray-400">
+                    Sign in to upload images and generate funny captions.
+                </p>
+
+                {callbackUrl && (
+                    <div className="mt-8">
+                        <div
+                            id="g_id_onload"
+                            data-client_id={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+                            data-login_uri={callbackUrl}
+                            data-ux_mode="redirect"
+                            data-auto_prompt="false"
+                        />
+
+                        <div
+                            className="g_id_signin"
+                            data-type="standard"
+                            data-size="large"
+                            data-theme="outline"
+                            data-text="sign_in_with"
+                        />
+                    </div>
+                )}
+            </div>
         </main>
     );
 }
