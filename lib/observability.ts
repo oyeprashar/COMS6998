@@ -9,14 +9,14 @@ export function observabilityDb() {
   });
 }
 
-export async function logGenerationStart(userId: string, storagePath: string) {
+export async function logGenerationStart(userId: string, storagePath: string, selectedChainId?: string | null) {
   const db = observabilityDb();
   if (!db) return null;
   const { data: chain } = await db.from("prompt_chains")
     .select("id").eq("name", "Image-to-Funny-Captions").eq("is_active", true).maybeSingle();
   const { data, error } = await db.from("generation_requests").insert({
     requested_by: userId,
-    prompt_chain_id: chain?.id ?? null,
+    prompt_chain_id: selectedChainId ?? chain?.id ?? null,
     input_text: storagePath,
     status: "running",
   }).select("id").single();
