@@ -3,16 +3,17 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { checkAppAccess } from "@/lib/access";
 import { logGenerationStart, logModelOutput, logGenerationEnd } from "@/lib/observability";
+import { getGenerationConfig } from "@/lib/generation-config";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 
-async function generateWithFallback(contents: any) {
-    const models = [
+async function generateWithFallback(contents: any, configuredModels: string[] = []) {
+    const models = [...new Set([...configuredModels,
         "gemini-3.8-flash",
         "gemini-3.5-flash-lite",
-    ];
+    ])];
 
     let lastError: unknown;
 
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
             );
         }
 
-        generationRequestId = await logGenerationStart(user.id, storagePath);
+        const config = await getGenerationConfig();
+        generationRequestId = await logGenerationStart(user.id, storagePath, config?.chainId);
 
         const arrayBuffer = await imageBlob.arrayBuffer();
 
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
                 },
             },
             {
-                text: `
+                text: config?.descriptionPrompt ?? `
 Describe this image clearly and objectively.
 
 Mention:
@@ -111,7 +113,7 @@ Mention:
 Keep the description under 120 words.
                 `,
             },
-        ]);
+        ], config?.modelIds);
 
         const description = descriptionResult.response.text?.trim();
 
@@ -125,7 +127,9 @@ Keep the description under 120 words.
         // PROMPT 2: DESCRIPTION -> FUNNY CAPTIONS
         // =====================================================
 
-        const captionResult = await generateWithFallback(`
+        const captionResult = await generateWithFallback(config?.captionPrompt
+            ? config.captionPrompt.replaceAll("{description}", description)
+            : `
 Here is a description of an image:
 
 "${description}"
@@ -138,7 +142,7 @@ Rules:
 - Make them playful and internet-friendly.
 - Do not number the captions.
 - Return exactly one caption per line.
-        `);
+        `, config?.modelIds);
 
         const captions = captionResult.response.text
             ?.split("\n")
