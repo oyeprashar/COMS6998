@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
+import { checkAppAccess } from "@/lib/access";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
                 { error: "Unauthorized" },
                 { status: 401 }
             );
+        }
+
+        if (!(await checkAppAccess())) {
+            return NextResponse.json({ error: "Email not allowed" }, { status: 403 });
         }
 
         const { storagePath } = await request.json();
