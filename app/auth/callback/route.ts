@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkAppAccess } from "@/lib/access";
 
 export async function POST(request: NextRequest) {
     const formData = await request.formData();
@@ -35,8 +36,10 @@ export async function POST(request: NextRequest) {
         });
     }
 
-    return NextResponse.redirect(
-        new URL("/protected", request.url),
-        303
-    );
+    if (!(await checkAppAccess())) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL("/access-denied", request.url), 303);
+    }
+
+    return NextResponse.redirect(new URL("/protected", request.url), 303);
 }
