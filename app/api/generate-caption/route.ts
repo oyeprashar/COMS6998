@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { checkAppAccess } from "@/lib/access";
+import { logGenerationStart, logModelOutput, logGenerationEnd } from "@/lib/observability";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -17,10 +18,9 @@ async function generateWithFallback(contents: any) {
 
     for (const model of models) {
         try {
-            return await ai.models.generateContent({
-                model,
-                contents,
-            });
+            const started = Date.now();
+            const response = await ai.models.generateContent({ model, contents });
+            return { response, model, elapsedMs: Date.now() - started };
         } catch (error) {
             lastError = error;
             console.error(`Gemini model failed: ${model}`, error);
@@ -31,6 +31,7 @@ async function generateWithFallback(contents: any) {
 }
 
 export async function POST(request: Request) {
+    let generationRequestId: string | null = null;
     try {
         const supabase = await createClient();
 
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
             );
         }
 
+        generationRequestId = await logGenerationStart(user.id, storagePath);
+
         const arrayBuffer = await imageBlob.arrayBuffer();
 
         const base64Image =
@@ -88,7 +91,7 @@ export async function POST(request: Request) {
         // PROMPT 1: IMAGE -> DESCRIPTION
         // =====================================================
 
-        const descriptionResponse = await generateWithFallback([
+        const descriptionResult = await generateWithFallback([
             {
                 inlineData: {
                     mimeType: imageBlob.type || "image/jpeg",
@@ -110,20 +113,19 @@ Keep the description under 120 words.
             },
         ]);
 
-        const description =
-            descriptionResponse.text?.trim();
+        const description = descriptionResult.response.text?.trim();
 
         if (!description) {
-            throw new Error(
-                "Gemini did not generate an image description."
-            );
+            throw new Error("Gemini did not generate an image description.");
         }
+        await logModelOutput(generationRequestId, descriptionResult.model, description,
+            descriptionResult.response.usageMetadata, descriptionResult.elapsedMs);
 
         // =====================================================
         // PROMPT 2: DESCRIPTION -> FUNNY CAPTIONS
         // =====================================================
 
-        const captionResponse = await generateWithFallback(`
+        const captionResult = await generateWithFallback(`
 Here is a description of an image:
 
 "${description}"
@@ -138,7 +140,7 @@ Rules:
 - Return exactly one caption per line.
         `);
 
-        const captions = captionResponse.text
+        const captions = captionResult.response.text
             ?.split("\n")
             .map((caption) =>
                 caption
@@ -154,11 +156,12 @@ Rules:
             );
         }
 
-        return NextResponse.json({
-            description,
-            captions,
-        });
+        await logModelOutput(generationRequestId, captionResult.model,
+            captionResult.response.text ?? "", captionResult.response.usageMetadata, captionResult.elapsedMs);
+        await logGenerationEnd(generationRequestId, "completed");
+        return NextResponse.json({ description, captions });
     } catch (error) {
+        await logGenerationEnd(generationRequestId, "failed", error instanceof Error ? error.message : "Unknown error");
         console.error("Generate caption error:", error);
 
         return NextResponse.json(
