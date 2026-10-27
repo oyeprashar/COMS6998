@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CaptionBattle from "./caption-battle";
+import { checkAppAccess } from "@/lib/access";
 
 export default async function ProtectedPage() {
     const supabase = await createClient();
@@ -12,6 +13,7 @@ export default async function ProtectedPage() {
     if (!user) {
         redirect("/");
     }
+    if (!(await checkAppAccess())) redirect("/access-denied");
 
     return (
         <main className="min-h-screen bg-[#070707] text-white">
