@@ -1,4 +1,3 @@
-import "server-only";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 export function observabilityDb() {
