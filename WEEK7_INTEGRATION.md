@@ -29,3 +29,14 @@ The existing image-upload and caption-generation process remains unchanged, and 
 - Sign in with an email not on either allowed list and confirm the access-denied page.
 - Generate a caption and check Generation Requests and LLM Responses in the admin app.
 - Confirm an unauthorized Google user cannot access the protected dashboard or call the caption API.
+
+## 4. Optional real-time AI configuration
+
+After setting `SUPABASE_SERVICE_ROLE_KEY` and registering your genuine prompt chain:
+1. Create an active **Google** or **Gemini** provider in the admin app and active Gemini model records. Their `model_identifier` must be an actual Google Gemini model ID.
+2. Set `USE_DB_AI_CONFIGURATION=true` in the user-facing app's server-side environment and redeploy.
+3. The caption endpoint will attempt active configured Gemini model identifiers first, falling back to its existing hardcoded model list on model API failures.
+4. The caption endpoint will select from active, positively weighted prompt chains. Currently, only chains with exactly two ordered steps are executable by this application. Step 1 receives the image; Step 2 can reference `{description}` to insert Step 1's output. If no compatible chain is configured, the existing hardcoded prompts remain in use.
+5. Changing prompt-chain weights affects relative selection only when multiple compatible chains exist. A single chain with any positive weight is always selected.
+
+**Important:** The configuration integration is opt-in and must be built/tested before relying on it in production. `terms` and `ai_generation_examples` remain data-management features because the Week 7 rubric does not define runtime semantics for them.
